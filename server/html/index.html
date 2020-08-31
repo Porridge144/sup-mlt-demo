@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Sup Mlt Demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <script>
+        function upload_data(audio_type, blobdata = null) {
+            var fd = new FormData();
+            if ("local" == audio_type) {
+                fd.append("uploadfile", document.getElementById('uploadfile_input').files[0]);
+                fd.append("uploadfilename", document.getElementById('uploadfile_input').files[0].name);
+            } else if ("record") {
+                fd.append("uploadfile", blobdata);
+                fd.append("uploadfilename", "userrecord.wav");
+            }
+            $.ajax({
+                type: "POST",
+                url: "upload-wav",
+                data: fd,
+                processData: false,
+                contentType: false,
+                beforeSend: function() {
+                    // $('#result').html('<img src="loading.gif" />');
+                    console.log("before sending")
+                    spinner_html = '<span class="spinner-border spinner-border-sm"></span>Processing'
+                    $("#submit_button").html(spinner_html);
+                    $("#submit_button").attr("disabled", true)
+                },
+                success: function(response) {
+                    // $('#result').html(response);
+                    console.log("response:")
+                    console.log(response)
+                    $("#recog_text").val(response.replace(/<space>/g, " "));
+                    $("#submit_button").html("Submit");
+                    $("#submit_button").attr("disabled", false)
+                },
+                error: function(jqXHR, textStatus, errorMessage) {
+                    console.log(errorMessage);
+                }
+            })
+        }
+        // handle submit
+        $(document).ready(function() {
+            $("#submit_button").click(function() {
+                upload_data("local")
+            });
+            // handle recording
+            let started = false;
+            let shouldStop = false;
+            const record_button = document.getElementById('record_button');
+
+            const handleSuccess = function(stream) {
+                const options = {mimeType: 'audio/webm'};
+                const recordedChunks = [];
+                const mediaRecorder = new MediaRecorder(stream, options);
+    
+                mediaRecorder.addEventListener('dataavailable', function(e) {
+                    console.log("data available");
+                    if (e.data.size > 0) {
+                        recordedChunks.push(e.data);
+                    }
+    
+                    if(shouldStop === true && started === true) {
+                        mediaRecorder.stop();
+                        stream.getTracks().forEach(function(track) {
+                            track.stop();
+                        });
+                        started = false;
+                        shouldStop = false;
+                        $("#record_button").html("Start Recording");
+                        $("#record_button").attr("class", "btn btn-success");
+                        console.log("should stop reached");
+                    }
+                });
+
+                mediaRecorder.addEventListener('stop', function() {
+                    upload_data("record", new Blob(recordedChunks))
+                    console.log("stopped recording");
+                });
+    
+                mediaRecorder.start(500);
+            };
+
+            record_button.addEventListener('click', function() {
+                if (started === false) {
+                    started = true;
+                    $("#record_button").html('<span class="spinner-grow spinner-grow-sm"></span> Stop Recording');
+                    $("#record_button").attr("class", "btn btn-danger");
+                    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(handleSuccess);
+                } else {
+                    shouldStop = true;
+                    console.log("stopped clicked")
+                }
+            });
+    
+
+        });
+
+    </script>
+
+    
+    <div class="container-fluid p-3 my-3 border rounded bg-light">
+        <div class="d-flex justify-content-center">
+            <h1 class="display-4">Demostration</h1>
+        </div>
+        <div class="d-flex justify-content-center">
+            <h5>for the paper</h5>
+        </div>
+        <div class="d-flex justify-content-center mb-3">
+            <h4>Large-Scale End-to-End Multilingual Speech Recognitionand Language Identification with Multi-Task Learning</h4>
+        </div>
+        <div class="d-flex justify-content-center mb-2">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <span class="input-group-text">Recognized Text</span>
+                </div>
+                <input type="text" class="form-control" id="recog_text">
+            </div>
+        </div>
+        <div class="d-flex justify-content-center">
+            <div class="form-group">
+                <input type="file" class="form-control-file border" id="uploadfile_input">
+            </div>
+        </div>
+        <div class="d-flex justify-content-center mb-2">
+            <button class="btn btn-success" id="record_button">
+                Start Recording
+            </button>
+        </div>
+        <div class="d-flex justify-content-center">
+            <button class="btn btn-primary" id="submit_button">Submit</button>
+        </div>
+    </div>
+
+
+</body>
+</html>
