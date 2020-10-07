@@ -15,9 +15,11 @@ import kaldiio
 
 import onnxruntime
 
+import os
+
 # load info into memory
-main_dir = "/net/tateha/storage5/jtekt/gshengzhou/sup-mlt-language/model_export/"
-server_dir = "/net/tateha/storage5/jtekt/gshengzhou/sup-mlt-language/server/"
+main_dir = os.getcwd() + "/"
+server_dir = os.path.join(os.getcwd(), "../server") + "/"
 
 with open(main_dir + "charlist.json", 'rb') as f:
     char_list = json.load(f)['char_list']
