@@ -157,11 +157,15 @@ def scp_modify_handler():
     f = open(main_dir + "feat_extract/preprocdir/dump/feats.scp", "r")
     lines = f.readlines()
     f.close()
+    f = open(server_dir + "decode_output.txt", "w")
     for line in lines:
         file_id = line.strip().split()[0]
         path_ark = line.strip().split()[1]
         feat = kaldiio.load_mat(path_ark)
         feat = torch.from_numpy(feat)
+        if len(feat) < 10:
+            f.write("skip too short utts\n")
+            continue
         # print(f"input size: {feat.shape}")
         nbest_hyps = infer(feat, encoder_rt, ctc_softmax_rt, decoder_fos_rt)
         # get token ids and tokens
@@ -170,10 +174,10 @@ def scp_modify_handler():
         print(token_as_list)
         token_as_list = token_as_list[:-1]
         token_as_list.insert(1, ",")
-        f = open(server_dir + file_id + "_decode_output.txt", "w")
+        # f = open(server_dir + file_id + "_decode_output.txt", "w")
         f.write("".join(token_as_list) + "\n")
-        f.close()
-
+        # f.close()
+    f.close()
 
 import pyinotify
 
